@@ -1,9 +1,11 @@
 const express = require('express');
+import dns from "node:dns/promises";
+dns.setServers(["8.8.8.8","1.1.1.1"]);
 const cors = require('cors');
 require('dotenv').config();
 
 // 1. IMPORT THE DATABASE CONNECTION FUNCTION
-const connectDB = require('./config/database');
+const connectDB = require('./config/db');
 
 const app = express();
 

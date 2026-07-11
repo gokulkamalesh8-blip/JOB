@@ -1,21 +1,14 @@
 const express = require('express');
 const { body } = require('express-validator');
 const handleValidation = require('../middleware/validation');
-const { authMiddleware } = require('../middleware/auth');
-const User = require('../models/User.model');
-const SavedJob = require('../models/SavedJob.model');
+const { authMiddleware, restrictTo } = require('../middleware/auth.middleware');
+const userController = require('../controllers/user.controller');
+const { upload } = require('../config/cloudinary');
 
 const router = express.Router();
 
 // GET /api/users/profile
-router.get('/profile', authMiddleware, async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    res.json({ success: true, user });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get('/profile', authMiddleware, userController.getProfile);
 
 // PUT /api/users/profile
 router.put(
@@ -27,52 +20,27 @@ router.put(
     body('bio').optional().trim(),
   ],
   handleValidation,
-  async (req, res, next) => {
-    try {
-      const user = await User.findByIdAndUpdate(
-        req.user._id,
-        req.body,
-        { new: true, runValidators: true }
-      );
-
-      res.json({ success: true, user });
-    } catch (error) {
-      next(error);
-    }
-  }
+  userController.updateProfile
 );
 
 // POST /api/users/saved-jobs/:jobId
-router.post('/saved-jobs/:jobId', authMiddleware, async (req, res, next) => {
-  try {
-    const savedJob = new SavedJob({
-      userId: req.user._id,
-      jobId: req.params.jobId,
-    });
-
-    await savedJob.save();
-    res.status(201).json({ success: true, message: 'Job saved' });
-  } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({ success: false, message: 'Already saved' });
-    }
-    next(error);
-  }
-});
+router.post('/saved-jobs/:jobId', authMiddleware, userController.saveJob);
 
 // GET /api/users/saved-jobs
-router.get('/saved-jobs', authMiddleware, async (req, res, next) => {
-  try {
-    const savedJobs = await SavedJob.find({
-      userId: req.user._id,
-    })
-      .populate('jobId')
-      .sort({ savedAt: -1 });
+router.get('/saved-jobs', authMiddleware, userController.getSavedJobs);
 
-    res.json({ success: true, savedJobs: savedJobs.map((s) => s.jobId) });
-  } catch (error) {
-    next(error);
-  }
-});
+// --- New Features: Resumes & Badges ---
+
+// POST /api/users/resumes (Upload a new resume)
+router.post('/resumes', authMiddleware, upload.single('resume'), userController.uploadResume);
+
+// PUT /api/users/resumes/:id/primary (Set a resume as primary)
+router.put('/resumes/:id/primary', authMiddleware, userController.setPrimaryResume);
+
+// DELETE /api/users/resumes/:id (Delete a resume)
+router.delete('/resumes/:id', authMiddleware, userController.deleteResume);
+
+// POST /api/users/badges (Add a skill badge - restricted to job_seekers)
+router.post('/badges', authMiddleware, restrictTo('job_seeker'), userController.addSkillBadge);
 
 module.exports = router;

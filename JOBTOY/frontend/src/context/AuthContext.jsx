@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -12,10 +12,8 @@ export const AuthProvider = ({ children }) => {
     const verifyToken = async () => {
       if (token) {
         try {
-          const res = await axios.get('/api/users/profile', {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          setUser(res.data.user);
+          const res = await api.get('/users/profile');
+          setUser(res.data.user || res.data.data?.user);
         } catch (error) {
           localStorage.removeItem('token');
           setToken(null);
@@ -44,4 +42,12 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
 };

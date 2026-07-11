@@ -2,116 +2,54 @@ const express = require('express');
 const { query, param, body } = require('express-validator');
 const handleValidation = require('../middleware/validation');
 const { authMiddleware, employerOnly } = require('../middleware/auth.middleware');
-const Job = require('../models/Job.model');
-const logger = require('../config/logger');
+const jobController = require('../controllers/job.controller');
 
 const router = express.Router();
 
-// GET /api/jobs
 router.get(
   '/',
   [
+    query('keyword').optional().trim(),
     query('q').optional().trim(),
     query('location').optional().trim(),
-    query('experience').optional().trim(),
+    query('category').optional().trim(),
+    query('type').optional().trim(),
+    query('job_type').optional().trim(),
+    query('remote').optional().isIn(['true', 'false']),
+    query('minSalary').optional().isInt().toInt(),
+    query('maxSalary').optional().isInt().toInt(),
     query('salary_min').optional().isInt().toInt(),
     query('salary_max').optional().isInt().toInt(),
-    query('job_type').optional().trim(),
-    query('sort').optional().default('-postedDate'),
-    query('page').optional().isInt().toInt().default(1),
-    query('limit').optional().isInt().toInt().default(20),
+    query('minExp').optional().isInt().toInt(),
+    query('maxExp').optional().isInt().toInt(),
+    query('sort').optional().trim(),
+    query('page').optional().isInt({ min: 1 }).toInt(),
+    query('limit').optional().isInt({ min: 1, max: 50 }).toInt(),
   ],
   handleValidation,
-  async (req, res, next) => {
-    try {
-      const { q, location, experience, salary_min, salary_max, job_type, sort, page, limit } = req.query;
-
-      let filter = { isActive: true };
-
-      if (q) {
-        filter.$text = { $search: q };
-      }
-      if (location) {
-        filter.location = location;
-      }
-      if (experience) {
-        filter.experienceRequired = experience;
-      }
-      if (salary_min || salary_max) {
-        filter.$and = [];
-        if (salary_min) filter.$and.push({ 'salary.min': { $gte: salary_min } });
-        if (salary_max) filter.$and.push({ 'salary.max': { $lte: salary_max } });
-      }
-      if (job_type) {
-        filter.jobType = job_type;
-      }
-
-      const skip = (page - 1) * limit;
-
-      const jobs = await Job.find(filter)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
-        .populate('company', 'name logo industry');
-
-      const total = await Job.countDocuments(filter);
-
-      logger.info(`Jobs fetched: ${jobs.length}/${total}`);
-
-      res.json({
-        success: true,
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit),
-        jobs,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  jobController.getJobs
 );
 
-// GET /api/jobs/:id
-router.get('/:id', async (req, res, next) => {
-  try {
-    const job = await Job.findById(req.params.id).populate(
-      'company',
-      'name logo industry size locations website'
-    );
+router.get('/meta', jobController.getJobMeta);
+router.get('/saved', authMiddleware, jobController.getSavedJobs);
+router.get('/recommended', authMiddleware, jobController.getRecommendedJobs);
 
-    if (!job) {
-      return res.status(404).json({
-        success: false,
-        message: 'Job not found',
-        code: 'JOB_NOT_FOUND',
-      });
-    }
+router.get(
+  '/:id/candidates/recommended',
+  authMiddleware,
+  employerOnly,
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.getRecommendedCandidates
+);
 
-    // Get similar jobs
-    const similarJobs = await Job.find({
-      _id: { $ne: job._id },
-      location: job.location,
-      isActive: true,
-      $or: [{ skills: { $in: job.skills } }, { title: job.title }],
-    })
-      .limit(4)
-      .select('title companyName location salary');
+router.get(
+  '/:id',
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.getJob
+);
 
-    // Increment views
-    await Job.findByIdAndUpdate(req.params.id, { $inc: { viewsCount: 1 } });
-
-    res.json({
-      success: true,
-      job,
-      similarJobs,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// POST /api/jobs (Employer only)
 router.post(
   '/',
   authMiddleware,
@@ -120,39 +58,45 @@ router.post(
     body('title').trim().notEmpty().withMessage('Job title is required'),
     body('description').notEmpty().withMessage('Description is required'),
     body('location').notEmpty().withMessage('Location is required'),
-    body('salary.min').isInt().withMessage('Min salary must be a number'),
-    body('salary.max').isInt().withMessage('Max salary must be a number'),
+    body('salary.min').optional().isInt().withMessage('Min salary must be a number'),
+    body('salary.max').optional().isInt().withMessage('Max salary must be a number'),
   ],
   handleValidation,
-  async (req, res, next) => {
-    try {
-      const { title, description, location, salary, jobType, skills, experienceRequired } = req.body;
+  jobController.createJob
+);
 
-      const job = new Job({
-        title,
-        description,
-        location,
-        salary,
-        jobType,
-        skills,
-        experienceRequired,
-        company: req.user.companyId,
-        postedBy: req.user._id,
-      });
+router.put(
+  '/:id',
+  authMiddleware,
+  employerOnly,
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.updateJob
+);
 
-      await job.save();
+router.delete(
+  '/:id',
+  authMiddleware,
+  employerOnly,
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.deleteJob
+);
 
-      logger.info(`New job posted: ${job._id}`);
+router.post(
+  '/:id/save',
+  authMiddleware,
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.saveJob
+);
 
-      res.status(201).json({
-        success: true,
-        message: 'Job posted successfully',
-        job,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+router.delete(
+  '/:id/save',
+  authMiddleware,
+  [param('id').isMongoId().withMessage('Invalid job id')],
+  handleValidation,
+  jobController.unsaveJob
 );
 
 module.exports = router;

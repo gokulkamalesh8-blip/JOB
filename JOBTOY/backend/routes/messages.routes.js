@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const handleValidation = require('../middleware/validation');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth.middleware');
 const Message = require('../models/Message.model');
 const User = require('../models/User.model');
 const logger = require('../config/logger');

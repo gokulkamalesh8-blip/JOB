@@ -1,7 +1,7 @@
 const express = require('express');
 const { query } = require('express-validator');
 const handleValidation = require('../middleware/validation');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware } = require('../middleware/auth.middleware');
 const Notification = require('../models/Notification.model');
 const logger = require('../config/logger');
 const { getRedisClient } = require('../config/redis');

@@ -1,50 +1,74 @@
 const express = require('express');
-const dns = require('dns');
-dns.setServers(['8.8.8.8', '8.8.4.4']);
 const cors = require('cors');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 
-// 1. IMPORT DATABASE CONNECTION
-const connectDB = require('./config/database');
+// Import Database Connection
+const connectDB = require('../config/db');
 
 const app = express();
 
-// 2. CONNECT TO MONGODB
+// Connect to MongoDB
 connectDB();
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174',
+  'http://localhost:3000',
+].filter(Boolean);
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Import routes
-const jobRoutes = require('./routes/jobRoutes');
-const userRoutes = require('./routes/userRoutes');
+// Import Real Routes
+const authRoutes = require('../routes/auth.routes');
+const userRoutes = require('../routes/user.routes');
+const jobRoutes = require('../routes/job.routes');
+const companyRoutes = require('../routes/company.routes');
+const applicationRoutes = require('../routes/application.routes');
+const messageRoutes = require('../routes/messages.routes');
+const notificationRoutes = require('../routes/notifications.routes');
+const adminRoutes = require('../routes/admin.routes');
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/applications', applicationRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Root route
 app.get('/', (req, res) => {
   res.json({ 
-    message: 'Welcome to Job Portal API',
+    message: 'Welcome to Job Portal API (Production-ready)',
     version: '1.0.0'
   });
 });
 
-// API Routes
-app.use('/api/jobs', jobRoutes);
-app.use('/api/users', userRoutes);
-
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'Server is running' });
+  res.json({ status: 'Server is running', env: process.env.NODE_ENV });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Server error:', err.stack);
   res.status(500).json({ 
+    success: false,
     error: 'Something went wrong!',
     message: err.message
   });
@@ -52,13 +76,17 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
+  res.status(404).json({ success: false, error: 'Route not found' });
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔗 http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;

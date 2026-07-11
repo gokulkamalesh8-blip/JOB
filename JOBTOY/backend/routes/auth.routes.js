@@ -66,6 +66,7 @@ router.post(
         success: true,
         message: 'Registration successful',
         user: user.toJSON(),
+        data: { user: user.toJSON() },
         token,
       });
     } catch (error) {
@@ -116,6 +117,7 @@ router.post(
         success: true,
         message: 'Login successful',
         user: user.toJSON(),
+        data: { user: user.toJSON() },
         token,
       });
     } catch (error) {

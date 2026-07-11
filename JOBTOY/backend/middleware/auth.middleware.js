@@ -61,9 +61,26 @@ const employerOnly = (req, res, next) => {
   next();
 };
 
+const protect = authMiddleware;
+
+const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user?.userType)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: role not authorized',
+        code: 'FORBIDDEN_ROLE',
+      });
+    }
+    next();
+  };
+};
+
 module.exports = {
   authMiddleware,
   optionalAuth,
   adminOnly,
   employerOnly,
+  protect,
+  restrictTo
 };

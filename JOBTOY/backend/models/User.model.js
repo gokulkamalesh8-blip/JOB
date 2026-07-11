@@ -27,8 +27,23 @@ const userSchema = new mongoose.Schema(
     headline: String,
     bio: String,
     avatar: String,
-    resumeUrl: String,
+    resumes: [
+      {
+        name: String,
+        url: String,
+        isPrimary: { type: Boolean, default: false },
+        uploadedAt: { type: Date, default: Date.now },
+      },
+    ],
     skills: [String],
+    skillBadges: [
+      {
+        skillName: String,
+        issuer: String,
+        score: Number,
+        dateEarned: { type: Date, default: Date.now },
+      },
+    ],
     experience: String,
     education: String,
     userType: {

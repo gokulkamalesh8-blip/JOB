@@ -14,7 +14,7 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     if (!email || !password) {
       setError('Please fill in all fields.');
       return;
@@ -24,16 +24,15 @@ export default function LoginPage() {
     try {
       const res = await api.post('/auth/login', { email, password });
       const { token, data } = res.data;
-      
-      login(token, data.user);
-      
-      // Redirect based on role
-      if (data.user.role === 'admin') {
+
+      login(data.user, token);
+
+      if (data.user.userType === 'admin') {
         navigate('/admin');
-      } else if (data.user.role === 'employer') {
+      } else if (data.user.userType === 'employer') {
         navigate('/employer/dashboard');
       } else {
-        navigate('/dashboard');
+        navigate('/jobs');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password.');
@@ -43,28 +42,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="container animate-fade-in" style={{ maxWidth: '440px', marginTop: '4rem' }}>
-      <div className="card" style={{ padding: '2.5rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', fontWeight: 700 }}>Welcome Back</h2>
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', marginBottom: '2rem' }}>
-          Enter your credentials to access your account
-        </p>
+    <div className="auth-background">
+      <div className="auth-card glass-panel animate-fade-in">
+        <div className="auth-header">
+          <span className="auth-kicker">Welcome back</span>
+          <h2 className="auth-title text-gradient">Log in to JobPortal</h2>
+          <p className="auth-subtitle">Enter your credentials to access your account.</p>
+        </div>
 
-        {error && (
-          <div style={{
-            background: '#fee2e2',
-            color: '#991b1b',
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: '0.875rem',
-            marginBottom: '1.25rem',
-            fontWeight: 500
-          }}>
-            {error}
-          </div>
-        )}
+        {error && <div className="form-alert">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label className="form-label" htmlFor="email">Email Address</label>
             <input
@@ -84,25 +72,20 @@ export default function LoginPage() {
               type="password"
               id="password"
               className="input-field"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: '1rem', padding: '0.75rem' }}
-            disabled={loading}
-          >
-            {loading ? 'Logging in...' : 'Log In'}
+          <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+            {loading ? 'Authenticating...' : 'Log In'}
           </button>
         </form>
 
-        <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '1.5rem' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 500 }}>Sign up</Link>
+        <p className="auth-footer-text">
+          Don't have an account? <Link to="/register">Sign up</Link>
         </p>
       </div>
     </div>

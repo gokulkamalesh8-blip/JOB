@@ -21,4 +21,4 @@ const savedJobSchema = new mongoose.Schema(
 // Unique index
 savedJobSchema.index({ userId: 1, jobId: 1 }, { unique: true });
 
-module.exports = mongoose.model('SavedJob', savedJobSchema);
+module.exports = mongoose.models.SavedJob || mongoose.model('SavedJob', savedJobSchema);

@@ -1,11 +1,32 @@
 const request = require('supertest');
-const app = require('../server');
-const User = require('../src/models/User.model');
+const mongoose = require('mongoose');
+const { MongoMemoryServer } = require('mongodb-memory-server');
+
+let mongoServer;
+let app;
+let User;
+
+beforeAll(async () => {
+  mongoServer = await MongoMemoryServer.create();
+  const uri = mongoServer.getUri();
+  process.env.MONGODB_URI = uri;
+  process.env.NODE_ENV = 'test';
+  
+  // Require app and models after setting MONGODB_URI
+  app = require('../src/server');
+  User = require('../models/User.model');
+});
+
+afterAll(async () => {
+  await mongoose.disconnect();
+  await mongoServer.stop();
+});
 
 describe('Auth Routes', () => {
   beforeEach(async () => {
     await User.deleteMany({});
   });
+
 
   test('POST /api/auth/register - should register a new user', async () => {
     const res = await request(app)
