@@ -1,0 +1,120 @@
+.messages-page {
+  min-height: 100vh;
+  background: var(--jobtoy-light);
+  padding: 20px;
+}
+
+.messages-container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+  height: 600px;
+}
+
+.messages-sidebar {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.messages-header h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.conversations-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.conversation-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.conversation-card:hover {
+  border-color: var(--jobtoy-orange);
+}
+
+.conversation-card.active {
+  background: var(--jobtoy-light);
+  border-color: var(--jobtoy-orange);
+}
+
+.conversation-avatar img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.conversation-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conversation-info h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.conversation-preview {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: var(--text-light);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-light);
+  padding: 30px;
+}
+
+.messages-main {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  overflow: hidden;
+}
+
+.no-conversation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-light);
+  font-size: 18px;
+}
+
+@media (max-width: 768px) {
+  .messages-container {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .messages-sidebar {
+    display: none;
+  }
+}
